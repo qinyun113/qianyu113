@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RiskGuard - 企业级风险评估系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        secondary: '#0FC6C2',
+                        danger: '#F53F3F',
+                        warning: '#FF7D00',
+                        success: '#00B42A',
+                        info: '#86909C',
+                        light: '#F2F3F5',
+                        dark: '#1D2129',
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'card': '0 4px 20px rgba(0, 0, 0, 0.08)',
+                        'card-hover': '0 8px 30px rgba(0, 0, 0, 0.12)',
+                    }
+                },
+            }
+        }
+    </script>
+    
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .text-shadow {
+                text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            .bg-gradient-blue {
+                background: linear-gradient(135deg, #165DFF 0%, #0A47D6 100%);
+            }
+            .bg-gradient-green {
+                background: linear-gradient(135deg, #00B42A 0%, #008720 100%);
+            }
+            .bg-gradient-orange {
+                background: linear-gradient(135deg, #FF7D00 0%, #D96B00 100%);
+            }
+            .bg-gradient-red {
+                background: linear-gradient(135deg, #F53F3F 0%, #D32F2F 100%);
+            }
+            .animate-fade-in {
+                animation: fadeIn 0.5s ease-in-out;
+            }
+            .animate-slide-up {
+                animation: slideUp 0.5s ease-out;
+            }
+            .animate-pulse-slow {
+                animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+    </style>
+</head>
+<body class="font-inter bg-gray-50 text-gray-800 min-h-screen flex flex-col">
+    <!-- 导航栏 -->
+    <nav id="navbar" class="bg-white shadow-md fixed w-full z-50 transition-all duration-300">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <i class="fa fa-shield text-primary text-2xl"></i>
+                <span class="text-xl font-bold text-primary">RiskGuard</span>
+            </div>
+            
+            <!-- 桌面导航 -->
+            <div class="hidden md:flex items-center space-x-8">
+                <a href="#dashboard" class="text-gray-700 hover:text-primary transition-colors font-medium">仪表盘</a>
+                <a href="#risks" class="text-gray-700 hover:text-primary transition-colors font-medium">风险列表</a>
+                <a href="#upload" class="text-gray-700 hover:text-primary transition-colors font-medium">数据上传</a>
+                <a href="#predictions" class="text-gray-700 hover:text-primary transition-colors font-medium">价格预测</a>
+            </div>
+            
+            <!-- 用户信息 -->
+            <div class="flex items-center space-x-4">
+                <div class="relative">
+                    <button class="text-gray-700 hover:text-primary transition-colors">
+                        <i class="fa fa-bell text-xl"></i>
+                        <span class="absolute -top-1 -right-1 bg-danger text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">3</span>
+                    </button>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <img src="https://picsum.photos/id/1005/40/40" alt="用户头像" class="w-8 h-8 rounded-full object-cover">
+                    <span class="hidden md:inline text-sm font-medium">管理员</span>
+                </div>
+                <button class="md:hidden text-gray-700" id="mobile-menu-button">
+                    <i class="fa fa-bars text-xl"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- 移动端导航菜单 -->
+        <div id="mobile-menu" class="hidden md:hidden bg-white border-t animate-fade-in">
+            <div class="container mx-auto px-4 py-2">
+                <a href="#dashboard" class="block py-2 text-gray-700 hover:text-primary transition-colors">仪表盘</a>
+                <a href="#risks" class="block py-2 text-gray-700 hover:text-primary transition-colors">风险列表</a>
+                <a href="#upload" class="block py-2 text-gray-700 hover:text-primary transition-colors">数据上传</a>
+                <a href="#predictions" class="block py-2 text-gray-700 hover:text-primary transition-colors">价格预测</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="flex-grow pt-16">
+        <!-- 仪表盘部分 -->
+        <section id="dashboard" class="container mx-auto px-4 py-12 animate-fade-in">
+            <div class="mb-8">
+                <h2 class="text-[clamp(1.5rem,3vw,2.5rem)] font-bold text-gray-800">风险评估仪表盘</h2>
+                <p class="text-gray-600 mt-2">实时监控和分析企业风险状况，提供决策支持</p>
+            </div>
+            
+            <!-- 数据概览卡片 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+                <div class="bg-white rounded-xl shadow-card p-6 hover:shadow-card-hover transition-shadow duration-300 animate-slide-up" style="animation-delay: 0.1s">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-gray-500 text-sm">总体风险指数</p>
+                            <h3 class="text-3xl font-bold mt-2 mb-4">68.2</h3>
+                            <div class="flex items-center text-red-500 text-sm">
+                                <i class="fa fa-arrow-up mr-1"></i>
+                                <span>3.2% 较上周</span>
+                            </div>
+                        </div>
+                        <div class="bg-blue-100 p-3 rounded-lg">
+                            <i class="fa fa-exclamation-triangle text-primary text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-xl shadow-card p-6 hover:shadow-card-hover transition-shadow duration-300 animate-slide-up" style="animation-delay: 0.2s">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-gray-500 text-sm">高风险项目</p>
+                            <h3 class="text-3xl font-bold mt-2 mb-4">12</h3>
+                            <div class="flex items-center text-green-500 text-sm">
+                                <i class="fa fa-arrow-down mr-1"></i>
+                                <span>2 较上周</span>
+                            </div>
+                        </div>
+                        <div class="bg-red-100 p-3 rounded-lg">
+                            <i class="fa fa-fire text-danger text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-xl shadow-card p-6 hover:shadow-card-hover transition-shadow duration-300 animate-slide-up" style="animation-delay: 0.3s">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-gray-500 text-sm">风险解决率</p>
+                            <h3 class="text-3xl font-bold mt-2 mb-4">78%</h3>
+                            <div class="flex items-center text-green-500 text-sm">
+                                <i class="fa fa-arrow-up mr-1"></i>
+                                <span>5% 较上月</span>
+                            </div>
+                        </div>
+                        <div class="bg-green-100 p-3 rounded-lg">
+                            <i class="fa fa-check-circle text-success text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-xl shadow-card p-6 hover:shadow-card-hover transition-shadow duration-300 animate-slide-up" style="animation-delay: 0.4s">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-gray-500 text-sm">项目总数</p>
+                            <h3 class="text-3xl font-bold mt-2 mb-4">48</h3>
+                            <div class="flex items-center text-blue-500 text-sm">
+                                <i class="fa fa-arrow-up mr-1"></i>
+                                <span>4 较上月</span>
+                            </div>
+                        </div>
+                        <div class="bg-purple-100 p-3 rounded-lg">
+                            <i class="fa fa-folder-open text-purple-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 图表区域 -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
+                <div class="bg-white rounded-xl shadow-card p-6 lg:col-span-2 animate-slide-up" style="animation-delay: 0.5s">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="font-semibold text-lg">风险趋势分析</h3>
+                        <div class="flex space-x-2">
+                            <button class="px-3 py-1 text-sm bg-primary text-white rounded-md hover:bg-primary/90 transition-colors">周</button>
+                            <button class="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors">月</button>
+                            <button class="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors">年</button>
+                        </div>
+                    </div>
+                    <div class="h-[300px]">
+                        <canvas id="riskTrendChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-xl shadow-card p-6 animate-slide-up" style="animation-delay: 0.6s">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="font-semibold text-lg">风险类型分布</h3>
+                        <button class="text-gray-400 hover:text-gray-600 transition-colors">
+                            <i class="fa fa-ellipsis-v"></i>
+                        </button>
+                    </div>
+                    <div class="h-[300px]">
+                        <canvas id="riskTypeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 最近风险 -->
+            <div class="bg-white rounded-xl shadow-card p-6 animate-slide-up" style="animation-delay: 0.7s">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="font-semibold text-lg">最近新增风险</h3>
+                    <a href="#risks" class="text-primary hover:text-primary/80 transition-colors flex items-center">
+                        <span>查看全部</span>
+                        <i class="fa fa-arrow-right ml-1 text-sm"></i>
+                    </a>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full">
+                        <thead>
+                            <tr class="border-b border-gray-200">
+                                <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">项目名称</th>
+                                <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">风险等级</th>
+                                <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">风险类型</th>
+                                <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">概率</th>
+                                <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">影响</th>
+                                <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
+                                <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="risk-table-body">
+                            <!-- 风险数据将通过JavaScript动态填充 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+        
+        <!-- 风险列表部分 -->
+        <section id="risks" class="container mx-auto px-4 py-12 animate-fade-in">
+            <div class="mb-8">
+                <h2 class="text-[clamp(1.5rem,3vw,2.5rem)] font-bold text-gray-800">风险列表</h2>
+                <p class="text-gray-600 mt-2">全面管理和跟踪所有项目风险</p>
+            </div>
+            
+            <!-- 筛选器 -->
+            <div class="bg-white rounded-xl shadow-sm p-6 mb-6 animate-slide-up">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">项目名称</label>
+                        <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" placeholder="搜索项目...">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">风险等级</label>
+                        <select class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary">
+                            <option value="">全部</option>
+                            <option value="高风险">高风险</option>
+                            <option value="中风险">中风险</option>
+                            <option value="低风险">低风险</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">风险类型</label>
+                        <select class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary">
+                            <option value="">全部</option>
+                            <option value="市场风险">市场风险</option>
+                            <option value="信用风险">信用风险</option>
+                            <option value="流动性风险">流动性风险</option>
+                            <option value="操作风险">操作风险</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">状态</label>
+                        <select class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary">
+                            <option value="">全部</option>
+                            <option value="未处理">未处理</option>
+                            <option value="处理中">处理中</option>
+                            <option value="已处理">已处理</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex justify-end mt-4">
+                    <button class="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors flex items-center">
+                        <i class="fa fa-search mr-2"></i>
+                        <span>搜索</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 风险列表 -->
+            <div class="bg-white rounded-xl shadow-card p-6 animate-slide-up">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="font-semibold text-lg">风险项目列表</h3>
+                    <button class="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors flex items-center" id="add-risk-btn">
+                        <i class="fa fa-plus mr-2"></i>
+                        <span>新增风险</span>
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full">
+                        <thead>
+                            <tr class="border-b border-gray-200">
+                                <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                                <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">项目名称</th>
+                                <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">风险等级</th>
+                                <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">风险类型</th>
+                                <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">概率</th>
+                                <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">影响</th>
+                                <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">风险得分</th>
+                                <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
+                                <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                <td class="py-3 px-4">R-001</td>
+                                <td class="py-3 px-4">市场拓展项目</td>
+                                <td class="py-3 px-4"><span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">高风险</span></td>
+                                <td class="py-3 px-4">市场风险</td>
+                                <td class="py-3 px-4">80%</td>
+                                <td class="py-3 px-4">严重</td>
+                                <td class="py-3 px-4">78.5</td>
+                                <td class="py-3 px-4"><span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">处理中</span></td>
+                                <td class="py-3 px-4">
+                                    <div class="flex space-x-2">
+                                        <button class="text-blue-600 hover:text-blue-800 transition-colors">
+                                            <i class="fa fa-eye"></i>
+                                        </button>
+                                        <button class="text-green-600 hover:text-green-800 transition-colors">
+                                            <i class="fa fa-edit"></i>
+                                        </button>
+                                        <button class="text-red-600 hover:text-red-800 transition-colors">
+                                            <i class="fa fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                <td class="py-3 px-4">R-002</td>
+                                <td class="py-3 px-4">新产品研发</td>
+                                <td class="py-3 px-4"><span class="px-2 py-1 text-xs rounded-full bg-orange-100 text-orange-800">中风险</span></td>
+                                <td class="py-3 px-4">技术风险</td>
+                                <td class="py-3 px-4">60%</td>
+                                <td class="py-3 px-4">中等</td>
+                                <td class="py-3 px-4">58.2</td>
+                                <td class="py-3 px-4"><span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">未处理</span></td>
+                                <td class="py-3 px-4">
+                                    <div class="flex space-x-2">
+                                        <button class="text-blue-600 hover:text-blue-800 transition-colors">
+                                            <i class="fa fa-eye"></i>
+                                        </button>
+                                        <button class="text-green-600 hover:text-green-800 transition-colors">
+                                            <i class="fa fa-edit"></i>
+                                        </button>
+                                        <button class="text-red-600 hover:text-red-800 transition-colors">
+                                            <i class="fa fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                <td class="py-3 px-4">R-003</td>
+                                <td class="py-3 px-4">供应链优化</td>
+                                <td class="py-3 px-4"><span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">低风险</span></td>
+                                <td class="py-3 px-4">操作风险</td>
+                                <td class="py-3 px-4">20%</td>
+                                <td class="py-3 px-4">轻微</td>
+                                <td class="py-3 px-4">18.7</td>
+                                <td class="py-3 px-4"><span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">已处理</span></td>
+                                <td class="py-3 px-4">
+                                    <div class="flex space-x-2">
+                                        <button class="text-blue-600 hover:text-blue-800 transition-colors">
+                                            <i class="fa fa-eye"></i>
+                                        </button>
+                                        <button class="text-green-600 hover:text-green-800 transition-colors">
+                                            <i class="fa fa-edit"></i>
+                                        </button>
+                                        <button class="text-red-600 hover:text-red-800 transition-colors">
+                                            <i class="fa fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                <td class="py-3 px-4">R-004</td>
+                                <td class="py-3 px-4">海外市场投资</td>
+                                <td class="py-3 px-4"><span class="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">高风险</span></td>
+                                <td class="py-3 px-4">政治风险</td>
+                                <td class="py-3 px-4">90%</td>
+                                <td class="py-3 px-4">严重</td>
+                                <td class="py-3 px-4">87.3</td>
+                                <td class="py-3 px-4"><span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">处理中</span></td>
+                                <td class="py-3 px-4">
+                                    <div class="flex space-x-2">
+                                        <button class="text-blue-600 hover:text-blue-800 transition-colors">
+                                            <i class="fa fa-eye"></i>
+                                        </button>
+                                        <button class="text-green-600 hover:text-green-800 transition-colors">
+                                            <i class="fa fa-edit"></i>
+                                        </button>
+                                        <button class="text-red-600 hover:text-red-800 transition-colors">
+                                            <i class="fa fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                <td class="py-3 px-4">R-005</td>
+                                <td class="py-3 px-4">并购项目</td>
+                                <td class="py-3 px-4"><span class="px-2 py-1 text-xs rounded-full bg-orange-100 text-orange-800">中风险</span></td>
+                                <td class="py-3 px-4">财务风险</td>
+                                <td class="py-3 px-4">50%</td>
+                                <td class="py-3 px-4">中等</td>
+                                <td class="py-3 px-4">48.9</td>
+                                <td class="py-3 px-4"><span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">未处理</span></td>
+                                <td class="py-3 px-4">
+                                    <div class="flex space-x-2">
+                                        <button class="text-blue-600 hover:text-blue-800 transition-colors">
+                                            <i class="fa fa-eye"></i>
+                                        </button>
+                                        <button class="text-green-600 hover:text-green-800 transition-colors">
+                                            <i class="fa fa-edit"></i>
+                                        </button>
+                                        <button class="text-red-600 hover:text-red-800 transition-colors">
+                                            <i class="fa fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- 分页 -->
+                <div class="flex justify-between items-center mt-6">
+                    <div class="text-sm text-gray-600">
+                        显示 1-5 条，共 24 条
+                    </div>
+                    <div class="flex space-x-1">
+                        <button class="px-3 py-1 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                            <i class="fa fa-chevron-left"></i>
+                        </button>
+                        <button class="px-3 py-1 rounded-md bg-primary text-white">1</button>
+                        <button class="px-3 py-1 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50">2</button>
+                        <button class="px-3 py-1 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50">3</button>
+                        <button class="px-3 py-1 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50">4</button>
+                        <button class="px-3 py-1 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50">5</button>
+                        <button class="px-3 py-1 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50">
+                            <i class="fa fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- 数据上传部分 -->
+        <section id="upload" class="container mx-auto px-4 py-12 animate-fade-in">
+            <div class="mb-8">
+                <h2 class="text-[clamp(1.5rem,3vw,2.5rem)] font-bold text-gray-800">数据上传</h2>
+                <p class="text-gray-600 mt-2">上传风险评估相关数据，支持CSV、Excel等格式</p>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- 上传区域 -->
+                <div class="bg-white rounded-xl shadow-card p-6 lg:col-span-2 animate-slide-up">
+                    <h3 class="font-semibold text-lg mb-4">上传风险数据</h3>
+                    
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center mb-6">
+                        <div id="dropzone" class="upload-dropzone">
+                            <div class="text-center">
+                                <i class="fa fa-cloud-upload text-4xl text-gray-400 mb-4"></i>
+                                <p class="text-gray-600 mb-2">拖拽文件到此处或</p>
+                                <button id="browse-files" class="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors">
+                                    浏览文件
+                                </button>
+                                <p class="text-xs text-gray-500 mt-4">支持 CSV, Excel (.xlsx, .xls) 格式，最大文件大小 10MB</p>
+                            </div>
+                        </div>
+                        <input type="file" id="file-input" class="hidden" accept=".csv,.xlsx,.xls">
+                    </div>
+                    
+                    <!-- 上传表单 -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">项目名称</label>
+                            <input type="text" id="upload-project-name" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" placeholder="请输入项目名称">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">数据类型</label>
+                            <select id="upload-data-type" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary">
+                                <option value="">请选择数据类型</option>
+                                <option value="历史风险数据">历史风险数据</option>
+                                <option value="市场数据">市场数据</option>
+                                <option value="财务数据">财务数据</option>
+                                <option value="其他">其他</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- 上传按钮 -->
+                    <div class="flex justify-end space-x-4">
+                        <button class="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors">
+                            取消
+                        </button>
+                        <button id="confirm-upload" class="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors flex items-center">
+                            <i class="fa fa-upload mr-2"></i>
+                            <span>上传文件</span>
+                        </button>
+                    </div>
+                    
+                    <!-- 上传结果 -->
+                    <div id="upload-result" class="hidden mt-6 p-4 rounded-lg">
+                        <div id="upload-success" class="hidden bg-green-50 border border-green-200 text-green-700 p-4 rounded-lg">
+                            <div class="flex items-start">
+                                <div class="flex-shrink-0">
+                                    <i class="fa fa-check-circle text-green-500 text-xl"></i>
+                                </div>
+                                <div class="ml-3">
+                                    <h3 class="text-sm font-medium">上传成功</h3>
+                                    <div class="mt-2 text-sm">
+                                        <p>文件已成功上传并开始处理</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="upload-error" class="hidden bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">
+                            <div class="flex items-start">
+                                <div class="flex-shrink-0">
+                                    <i class="fa fa-exclamation-circle text-red-500 text-xl"></i>
+                                </div>
+                                <div class="ml-3">
+                                    <h3 class="text-sm font-medium">上传失败</h3>
+                                    <div class="mt-2 text-sm">
+                                        <p id="error-message">上传过程中发生错误</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 上传历史 -->
+                <div class="bg-white rounded-xl shadow-card p-6 animate-slide-up">
+                    <h3 class="font-semibold text-lg mb-4">上传历史</h3>
+                    
+                    <div class="overflow-y-auto max-h-[400px]">
+                        <table class="min-w-full">
+                            <thead>
+                                <tr class="border-b border-gray-200">
+                                    <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">文件名</th>
+                                    <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
+                                </tr>
+                            </thead>
+                            <tbody id="upload-history-body">
+                                <!-- 上传历史将通过JavaScript动态填充 -->
+                            </tbody>
+                        </table>
+                        
+                        <!-- 暂无历史记录 -->
+                        <div id="no-history" class="py-12 text-center">
+                            <i class="fa fa-history text-gray-300 text-5xl mb-4"></i>
+                            <p class="text-gray-500">暂无上传历史记录</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- 价格预测部分 -->
+        <section id="predictions" class="container mx-auto px-4 py-12 animate-fade-in">
+            <div class="mb-8">
+                <h2 class="text-[clamp(1.5rem,3vw,2.5rem)] font-bold text-gray-800">价格预测</h2>
+                <p class="text-gray-600 mt-2">基于历史数据进行风险资产价格预测分析</p>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- 预测表单 -->
+                <div class="bg-white rounded-xl shadow-card p-6 animate-slide-up">
+                    <h3 class="font-semibold text-lg mb-4">创建价格预测</h3>
+                    
+                    <form id="prediction-form" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">选择项目</label>
+                            <select class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary">
+                                <option value="">请选择项目</option>
+                                <option value="1">市场拓展项目</option>
+                                <option value="2">新产品研发</option>
+                                <option value="3">供应链优化</option>
+                                <option value="4">海外市场投资</option>
+                                <option value="5">并购项目</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">预测周期</label>
+                            <div class="grid grid-cols-3 gap-2">
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="radio" name="period" value="30" class="sr-only peer" checked>
+                                    <div class="w-5 h-5 border border-gray-300 rounded-full peer peer-checked:after:content-[''] peer-checked:after:absolute peer-checked:after:w-3 peer-checked:after:h-3 peer-checked:after:rounded-full peer-checked:after:bg-primary peer-checked:after:left-0.5 peer-checked:after:top-0.5 peer-checked:border-primary"></div>
+                                    <span class="ml-2 text-sm font-medium text-gray-700">30天</span>
+                                </label>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="radio" name="period" value="90" class="sr-only peer">
+                                    <div class="w-5 h-5 border border-gray-300 rounded-full peer peer-checked:after:content-[''] peer-checked:after:absolute peer-checked:after:w-3 peer-checked:after:h-3 peer-checked:after:rounded-full peer-checked:after:bg-primary peer-checked:after:left-0.5 peer-checked:after:top-0.5 peer-checked:border-primary"></div>
+                                    <span class="ml-2 text-sm font-medium text-gray-700">90天</span>
+                                </label>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="radio" name="period" value="180" class="sr-only peer">
+                                    <div class="w-5 h-5 border border-gray-300 rounded-full peer peer-checked:after:content-[''] peer-checked:after:absolute peer-checked:after:w-3 peer-checked:after:h-3 peer-checked:after:rounded-full peer-checked:after:bg-primary peer-checked:after:left-0.5 peer-checked:after:top-0.5 peer-checked:border-primary"></div>
+                                    <span class="ml-2 text-sm font-medium text-gray-700">180天</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">预测算法</label>
+                            <select class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary">
+                                <option value="linear">线性回归</option>
+                                <option value="arima">ARIMA模型</option>
+                                <option value="lstm">LSTM神经网络</option>
+                                <option value="ensemble">集成学习</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">历史数据</label>
+                            <div class="border border-gray-300 rounded-md p-3 bg-gray-50">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-sm text-gray-600">prices.csv</span>
+                                    <button type="button" class="text-red-500 hover:text-red-700 text-sm">
+                                        <i class="fa fa-trash"></i>
+                                    </button>
+                                </div>
+                                <div class="text-xs text-gray-500">
+                                    100条记录 · 最近更新: 2023-12-31
+                                </div>
+                            </div>
+                            <button type="button" class="mt-2 text-primary hover:text-primary/80 text-sm flex items-center">
+                                <i class="fa fa-upload mr-1"></i>
+                                <span>上传新数据</span>
+                            </button>
+                        </div>
+                        
+                        <button type="submit" class="w-full px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors flex items-center justify-center">
+                            <i class="fa fa-calculator mr-2"></i>
+                            <span>生成预测</span>
+                        </button>
+                    </form>
+                </div>
+                
+                <!-- 预测结果 -->
+                <div class="bg-white rounded-xl shadow-card p-6 lg:col-span-2 animate-slide-up">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="font-semibold text-lg">价格预测结果</h3>
+                        <div class="flex space-x-2">
+                            <button class="px-3 py-1 text-sm bg-primary text-white rounded-md hover:bg-primary/90 transition-colors">
+                                <i class="fa fa-download mr-1"></i> 导出
+                            </button>
+                            <button class="px-3 py-1 text-sm bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors">
+                                <i class="fa fa-share-alt mr-1"></i> 分享
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <div class="flex justify-between items-center mb-2">
+                            <div>
+                                <h4 class="font-medium">市场拓展项目价格走势预测</h4>
+                                <p class="text-sm text-gray-500">预测周期: 未来30天 · 算法: 线性回归</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-sm text-gray-500">预测准确率</p>
+                                <p class="text-xl font-bold text-primary">87.2%</p>
+                            </div>
+                        </div>
+                        
+                        <div class="h-[300px]">
+                            <canvas id="pricePredictionChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- 预测数据 -->
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full">
+                            <thead>
+                                <tr class="border-b border-gray-200">
+                                    <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">日期</th>
+                                    <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">预测价格</th>
+                                    <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">涨跌幅</th>
+                                    <th class="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">风险等级</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                    <td class="py-3 px-4">2024-01-01</td>
+                                    <td class="py-3 px-4">¥125.40</td>
+                                    <td class="py-3 px-4"><span class="text-green-600">+2.3%</span></td>
+                                    <td class="py-3 px-4"><span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">低风险</span></td>
+                                </tr>
+                                <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                    <td class="py-3 px-4">2024-01-02</td>
+                                    <td class="py-3 px-4">¥123.10</td>
+                                    <td class="py-3 px-4"><span class="text-red-600">-1.8%</span></td>
+                                    <td class="py-3 px-4"><span class="px-2 py-1 text-xs rounded-full bg-orange-100 text-orange-800">中风险</span></td>
+                                </tr>
+                                <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                    <td class="py-3 px-4">2024-01-03</td>
+                                    <td class="py-3 px-4">¥128.50</td>
+                                    <td class="py-3 px-4"><span class="text-green-600">+4.3%</span></td>
+                                    <td class="py-3 px-4"><span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">低风险</span></td>
+                                </tr>
+                                <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                    <td class="py-3 px-4">2024-01-04</td>
+                                    <td class="py-3 px-4">¥132.70</td>
+                                    <td class="py-3 px-4"><span class="text-green-600">+3.2%</span></td>
+                                    <td class="py-3 px-4"><span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">低风险</span></td>
+                                </tr>
+                                <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                    <td class="py-3 px-4">2024-01-05</td>
+                                    <td class="py-3 px-4">¥129.30</td>
+                                    <td class="py-3 px-4"><span class="text-red-600">-2.6%</span></td>
+                                    <td class="py-3 px-4"><span class="px-2 py-1 text-xs rounded-full bg-orange-100 text-orange-800">中风险</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-white border-t border-gray-200 py-8">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div>
+                    <div class="flex items-center space-x-2 mb-4">
+                        <i class="fa fa-shield text-primary text-2xl"></i>
+                        <span class="text-xl font-bold text-primary">RiskGuard</span>
+                    </div>
+                    <p class="text-gray-600 text-sm">专业的企业风险评估系统，帮助您识别、分析和管理各类风险，保障企业稳健发展。</p>
+                </div>
+                
+                <div>
+                    <h4 class="font-medium text-gray-800 mb-4">产品</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="#" class="text-gray-600 hover:text-primary transition-colors">风险评估</a></li>
+                        <li><a href="#" class="text-gray-600 hover:text-primary transition-colors">市场分析</a></li>
+                        <li><a href="#" class="text-gray-600 hover:text-primary transition-colors">价格预测</a></li>
+                        <li><a href="#" class="text-gray-600 hover:text-primary transition-colors">报告生成</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="font-medium text-gray-800 mb-4">支持</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="#" class="text-gray-600 hover:text-primary transition-colors">帮助中心</a></li>
+                        <li><a href="#" class="text-gray-600 hover:text-primary transition-colors">API文档</a></li>
+                        <li><a href="#" class="text-gray-600 hover:text-primary transition-colors">联系我们</a></li>
+                        <li><a href="#" class="text-gray-600 hover:text-primary transition-colors">常见问题</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="font-medium text-gray-800 mb-4">联系我们</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li class="flex items-center text-gray-600">
+                            <i class="fa fa-map-marker w-4 text-gray-400"></i>
+                            <span>北京市朝阳区金融街88号</span>
+                        </li>
+                        <li class="flex items-center text-gray-600">
+                            <i class="fa fa-phone w-4 text-gray-400"></i>
+                            <span>400-888-9999</span>
+                        </li>
+                        <li class="flex items-center text-gray-600">
+                            <i class="fa fa-envelope w-4 text-gray-400"></i>
+                            <span>support@riskguard.com</span>
+                        </li>
+                    </ul>
+                    
+                    <div class="mt-4 flex space-x-4">
+                        <a href="#" class="text-gray-400 hover:text-primary transition-colors">
+                            <i class="fa fa-weixin text-xl"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-primary transition-colors">
+                            <i class="fa fa-weibo text-xl"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-primary transition-colors">
+                            <i class="fa fa-linkedin text-xl"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-primary transition-colors">
+                            <i class="fa fa-twitter text-xl"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="border-t border-gray-200 mt-8 pt-6 flex flex-col md:flex-row justify-between items-center">
+                <p class="text-gray-500 text-sm">© 2024 RiskGuard. 保留所有权利。</p>
+                <div class="flex space-x-6 mt-4 md:mt-0">
+                    <a href="#" class="text-gray-500 hover:text-primary text-sm transition-colors">隐私政策</a>
+                    <a href="#" class="text-gray-500 hover:text-primary text-sm transition-colors">服务条款</a>
+                    <a href="#" class="text-gray-500 hover:text-primary text-sm transition-colors">法律声明</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script>
+        // 导航栏滚动效果
+        window.addEventListener('scroll', function() {
+            const navbar = document.getElementById('navbar');
+            if (window.scrollY > 10) {
+                navbar.classList.add('py-2');
+                navbar.classList.add('shadow-lg');
+            } else {
+                navbar.classList.remove('py-2');
+                navbar.classList.remove('shadow-lg');
+            }
+        });
+        
+        // 移动端菜单切换
+        document.getElementById('mobile-menu-button').addEventListener('click', function() {
+            const mobileMenu = document.getElementById('mobile-menu');
+            mobileMenu.classList.toggle('hidden');
+        });
+        
+        // 文件上传处理
+        document.getElementById('browse-files').addEventListener('click', function() {
+            document.getElementById('file-input').click();
+        });
+        
+        document.getElementById('file-input').addEventListener('change', function() {
+            const file = this.files[0];
+            if (file) {
+                // 这里可以添加文件预览或其他处理
+                console.log('Selected file:', file.name);
+            }
+        });
+        
+        // 拖放上传
+        const dropzone = document.getElementById('dropzone');
+        dropzone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            this.classList.add('active');
+        });
+        
+        dropzone.addEventListener('dragleave', function() {
+            this.classList.remove('active');
+        });
+        
+        dropzone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.classList.remove('active');
+            
+            if (e.dataTransfer.files.length) {
+                document.getElementById('file-input').files = e.dataTransfer.files;
+                // 这里可以添加文件预览或其他处理
+                console.log('Dropped file:', e.dataTransfer.files[0].name);
+            }
+        });
+        
+        // 风险数据加载
+        function loadRiskData() {
+            // 模拟从API获取数据
+            const riskData = [
+                {
+                    "project_name": "项目A",
+                    "risk_level": "高风险",
+                    "risk_type": "市场风险",
+                    "probability": "80%",
+                    "impact": "严重",
+                    "status": "未处理",
+                    "action": "查看详情"
+                },
+                {
+                    "project_name": "项目B",
+                    "risk_level": "中风险",
+                    "risk_type": "信用风险",
+                    "probability": "60%",
+                    "impact": "中等",
+                    "status": "处理中",
+                    "action": "查看详情"
+                },
+                {
+                    "project_name": "项目C",
+                    "risk_level": "低风险",
+                    "risk_type": "流动性风险",
+                    "probability": "20%",
+                    "impact": "轻微",
+                    "status": "已处理",
+                    "action": "查看详情"
+                }
+            ];
+            
+            const riskTableBody = document.getElementById('risk-table-body');
+            riskTableBody.innerHTML = '';
+            
+            riskData.forEach(risk => {
+                const row = document.createElement('tr');
+                row.className = 'border-b border-gray-100 hover:bg-gray-50 transition-colors';
+                
+                // 设置风险等级样式
+                let riskLevelClass = '';
+                if (risk.risk_level === '高风险') {
+                    riskLevelClass = 'bg-red-100 text-red-800';
+                } else if (risk.risk_level === '中风险') {
+                    riskLevelClass = 'bg-orange-100 text-orange-800';
+                } else {
+                    riskLevelClass = 'bg-green-100 text-green-800';
+                }
+                
+                // 设置状态样式
+                let statusClass = '';
+                if (risk.status === '未处理') {
+                    statusClass = 'bg-gray-100 text-gray-800';
+                } else if (risk.status === '处理中') {
+                    statusClass = 'bg-yellow-100 text-yellow-800';
+                } else {
+                    statusClass = 'bg-green-100 text-green-800';
+                }
+                
+                row.innerHTML = `
+                    <td class="py-3 px-4">${risk.project_name}</td>
+                    <td class="py-3 px-4"><span class="px-2 py-1 text-xs rounded-full ${riskLevelClass}">${risk.risk_level}</span></td>
+                    <td class="py-3 px-4">${risk.risk_type}</td>
+                    <td class="py-3 px-4">${risk.probability}</td>
+                    <td class="py-3 px-4">${risk.impact}</td>
+                    <td class="py-3 px-4"><span class="px-2 py-1 text-xs rounded-full ${statusClass}">${risk.status}</span></td>
+                    <td class="py-3 px-4">
+                        <button class="text-primary hover:text-primary/80 transition-colors">
+                            ${risk.action}
+                        </button>
+                    </td>
+                `;
+                riskTableBody.appendChild(row);
+            });
+        }
+        
+        // 上传历史加载
+        function loadUploadHistory() {
+            // 模拟从API获取数据
+            const uploadHistory = [
+                {
+                    "filename": "risk_data_2023.csv",
+                    "project_name": "市场拓展项目",
+                    "data_type": "历史风险数据",
+                    "upload_time": "2023-12-31 14:30:25",
+                    "status": "成功",
+                    "action": "查看详情"
+                },
+                {
+                    "filename": "market_data.xlsx",
+                    "project_name": "新产品研发",
+                    "data_type": "市场数据",
+                    "upload_time": "2023-12-30 10:15:42",
+                    "status": "成功",
+                    "action": "查看详情"
+                }
+            ];
+            
+            const uploadHistoryBody = document.getElementById('upload-history-body');
+            uploadHistoryBody.innerHTML = '';
+            
+            uploadHistory.forEach(history => {
+                const row = document.createElement('tr');
+                row.className = 'border-b border-gray-100 hover:bg-gray-50 transition-colors';
+                
+                // 设置状态样式
+                let statusClass = history.status === '成功' ? 'text-green-600' : 'text-red-600';
+                
+                row.innerHTML = `
+                    <td class="py-3 px-4">
+                        <div class="flex items-center">
+                            <i class="fa fa-file-excel-o text-green-500 mr-2"></i>
+                            <span>${history.filename}</span>
+                        </div>
+                    </td>
+                    <td class="py-3 px-4">${history.project_name}</td>
+                    <td class="py-3 px-4">${history.data_type}</td>
+                    <td class="py-3 px-4">${history.upload_time}</td>
+                    <td class="py-3 px-4"><span class="${statusClass}">${history.status}</span></td>
+                    <td class="py-3 px-4">
+                        <button class="text-primary hover:text-primary/80 transition-colors">
+                            ${history.action}
+                        </button>
+                    </td>
+                `;
+                uploadHistoryBody.appendChild(row);
+            });
+            
+            const noHistory = document.getElementById('no-history');
+            if (uploadHistory.length === 0) {
+                noHistory.classList.remove('hidden');
+            } else {
+                noHistory.classList.add('hidden');
+            }
+        }
+        
+        // 图表初始化
+        function initCharts() {
+            // 风险趋势图
+            const riskTrendCtx = document.getElementById('riskTrendChart').getContext('2d');
+            const riskTrendChart = new Chart(riskTrendCtx, {
+                type: 'line',
+                data: {
+                    labels: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
+                    datasets: [
+                        {
+                            label: '总体风险指数',
+                            data: [65, 59, 80, 81, 56, 55, 68],
+                            borderColor: '#165DFF',
+                            backgroundColor: 'rgba(22, 93, 255, 0.1)',
+                            tension: 0.3,
+                            fill: true
+                        },
+                        {
+                            label: '高风险项目数',
+                            data: [12, 19, 15, 11, 13, 10, 12],
+                            borderColor: '#F53F3F',
+                            backgroundColor: 'rgba(245, 63, 63, 0.1)',
+                            tension: 0.3,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            grid: {
+                                drawBorder: false
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // 风险类型分布图
+            const riskTypeCtx = document.getElementById('riskTypeChart').getContext('2d');
+            const riskTypeChart = new Chart(riskTypeCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['市场风险', '信用风险', '流动性风险', '操作风险', '其他风险'],
+                    datasets: [{
+                        data: [35, 25, 15, 15, 10],
+                        backgroundColor: [
+                            '#165DFF',
+                            '#0FC6C2',
+                            '#FF7D00',
+                            '#F53F3F',
+                            '#86909C'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 12,
+                                padding: 15
+                            }
+                        }
+                    },
+                    cutout: '65%'
+                }
+            });
+            
+            // 价格预测图
+            const pricePredictionCtx = document.getElementById('pricePredictionChart').getContext('2d');
+            const pricePredictionChart = new Chart(pricePredictionCtx, {
+                type: 'line',
+                data: {
+                    labels: ['12/27', '12/28', '12/29', '12/30', '12/31', '01/01', '01/02', '01/03', '01/04', '01/05'],
+                    datasets: [
+                        {
+                            label: '历史价格',
+                            data: [118, 120, 122, 121, 122.5, null, null, null, null, null],
+                            borderColor: '#165DFF',
+                            backgroundColor: 'rgba(22, 93, 255, 0.1)',
+                            tension: 0.3,
+                            borderDash: [],
+                            fill: false
+                        },
+                        {
+                            label: '预测价格',
+                            data: [null, null, null, null, 122.5, 125.4, 123.1, 128.5, 132.7, 129.3],
+                            borderColor: '#00B42A',
+                            backgroundColor: 'rgba(0, 180, 42, 0.1)',
+                            tension: 0.3,
+                            borderDash: [5, 5],
+                            fill: false
+                        },
+                        {
+                            label: '风险区间',
+                            data: [null, null, null, null, 122.5, 127.2, 125.8, 131.3, 135.2, 132.1],
+                            borderColor: 'rgba(0, 180, 42, 0.2)',
+                            backgroundColor: 'rgba(0, 180, 42, 0.05)',
+                            tension: 0.3,
+                            borderDash: [5, 5],
+                            fill: 'origin',
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            grid: {
+                                drawBorder: false
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return '¥' + value;
+                                }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 页面加载完成后执行
+        window.addEventListener('load', function() {
+            loadRiskData();
+            loadUploadHistory();
+            initCharts();
+            
+            // 平滑滚动
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    
+                    const targetId = this.getAttribute('href');
+                    if (targetId === '#') return;
+                    
+                    const targetElement = document.querySelector(targetId);
+                    if (targetElement) {
+                        window.scrollTo({
+                            top: targetElement.offsetTop - 80, // 考虑导航栏高度
+                            behavior: 'smooth'
+                        });
+                        
+                        // 关闭移动菜单
+                        document.getElementById('mobile-menu').classList.add('hidden');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>    
